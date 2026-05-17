@@ -7,6 +7,10 @@ Come back to an AI-assisted coding project after a week and recover the thread i
 [![CI](https://img.shields.io/github/actions/workflow/status/matheusbuniotto/mind-cli/ci.yml?branch=main)](https://github.com/matheusbuniotto/mind-cli/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/matheusbuniotto/mind-cli)](https://github.com/matheusbuniotto/mind-cli/releases)
 
+<p align="center">
+  <img src="assets/mind-restore-demo.gif" alt="mind restoring project context in the terminal" width="900">
+</p>
+
 When you reopen a repo after time away, `mind` helps you recover:
 
 - what the project is trying to do
