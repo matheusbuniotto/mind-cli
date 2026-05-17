@@ -82,8 +82,6 @@ def _interactive_menu(cwd: str) -> None:
     selected = questionary.checkbox(
         "Select notes to delete:",
         choices=list(label_to_id.keys()),
-        use_indicator=True,
-        use_shortcuts=False,
     ).ask()
     if not selected:
         raise typer.Exit(0)

@@ -1,16 +1,22 @@
 {
   "version": 1,
   "skills": {
-    "simplify-ai-architecture": {
-      "source": "matheusbuniotto/skills-library",
+    "launch-marketing": {
+      "source": "refoundai/lenny-skills",
       "sourceType": "github",
-      "skillPath": "skills/engineering/simplify-ai-architecture/SKILL.md",
-      "computedHash": "5362f437129fc5fe34b2facf54e06469531c1667cc4b473438b38974abe8497e"
+      "skillPath": "skills/launch-marketing/SKILL.md",
+      "computedHash": "d16cdbc8c00dd8dbd85ddd8721f16f2a56368e20846448a455931ca3399fc97f"
     },
     "mind-recap": {
       "source": "matheusbuniotto/skills-library",
       "sourceType": "github",
       "skillPath": "skills/engineering/mind-recap/SKILL.md"
+    },
+    "simplify-ai-architecture": {
+      "source": "matheusbuniotto/skills-library",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/simplify-ai-architecture/SKILL.md",
+      "computedHash": "5362f437129fc5fe34b2facf54e06469531c1667cc4b473438b38974abe8497e"
     }
   }
 }
