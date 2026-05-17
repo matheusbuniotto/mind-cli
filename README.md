@@ -1,41 +1,21 @@
 # mind
 
-`mind` restores the mental state of an AI-assisted coding project after you have been away from it.
+Come back to an AI-assisted coding project after a week and recover the thread in minutes.
+
+> AI coding tools remember a session. `mind` helps you remember the project.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/matheusbuniotto/mind-cli/ci.yml?branch=main)](https://github.com/matheusbuniotto/mind-cli/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/matheusbuniotto/mind-cli)](https://github.com/matheusbuniotto/mind-cli/releases)
 
-When you come back to a repo after a few days, you usually need to reconstruct:
+When you reopen a repo after time away, `mind` helps you recover:
 
 - what the project is trying to do
 - what already shipped
-- what you were in the middle of
+- what was in progress
 - what is blocked
 - what to do next
 
 `mind` rebuilds that picture from your real Claude Code, Codex, and Cursor history plus the repo itself, then gives you a restore brief in the terminal.
-
-## The problem
-
-AI coding tools remember a session. You still have to remember the project.
-
-If you bounce between projects, context loss becomes a hidden tax: rereading diffs, reopening tabs, scanning chats, rediscovering blockers, and asking the model to infer what you already knew last week.
-
-`mind` is for that re-entry moment.
-
-## Who this is for
-
-`mind` is useful if you work across several projects, return to repos after days or weeks away, or use multiple AI coding tools and keep paying the cost of reconstructing project state before you can make progress again.
-
-## What you get
-
-- a structured restore brief instead of a chat-log archaeology session
-- one recap across Claude Code, Codex, and Cursor
-- current git facts separated from AI-generated summaries
-- a trust boundary you can inspect before sending anything to a model
-- a compact social handoff when you want to share project status
-
-Example workflow:
 
 ```bash
 mind sync
@@ -43,13 +23,62 @@ mind sync
 mind restore
 ```
 
-If you just want to see the shape before using real data:
+## See the shape
+
+If you want to preview the experience before using your own data:
 
 ```bash
 mind doctor --demo
 ```
 
-## Try it
+<details>
+<summary>Example restore brief</summary>
+
+```text
+Goal & Vision
+SampleCo is a CLI that turns scattered AI session history into a two-minute
+re-entry brief after time away.
+
+Current Status
+- mind sync ingests Claude Code, Codex, and Cursor artifacts for a repo.
+- mind restore prints an AI digest plus a live git snapshot.
+
+Active Work
+- Hardening first-run diagnostics.
+- Adding --inspect so users can see exactly which files feed a digest.
+
+Next Actions
+1. Run mind doctor after install.
+2. Export ANTHROPIC_API_KEY or OPENAI_API_KEY.
+3. mind sync in your repo, then mind restore.
+```
+
+</details>
+
+## The problem
+
+If you bounce between projects, context loss becomes a hidden tax: rereading diffs, reopening tabs, scanning chats, rediscovering blockers, and asking the model to infer what you already knew last week.
+
+`mind` is for that re-entry moment.
+
+## Who this is for
+
+Use `mind` if you:
+
+- work across several projects at once
+- return to repos after days or weeks away
+- use Claude Code, Codex, Cursor, or more than one AI coding tool
+- lose time reconstructing project state before you can make progress again
+
+## What you get
+
+- **one restore brief** instead of a chat-log archaeology session
+- **one recap across tools** instead of separate Claude Code, Codex, and Cursor histories
+- **live git facts** kept separate from AI-generated summaries
+- **an inspectable trust boundary** before anything is sent to a model
+- **a compact social handoff** when you want to share project status
+
+## Quick start
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/matheusbuniotto/mind-cli/main/install.sh | sh
@@ -78,6 +107,13 @@ uv tool install ./mind-cli
 mind init          # first time: config wizard + skill + hooks
 # after upgrading mind:
 mind install -y    # refresh skill + hooks only
+```
+
+Then, inside a repo:
+
+```bash
+mind sync
+mind restore
 ```
 
 ## What it reads
