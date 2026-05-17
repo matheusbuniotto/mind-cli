@@ -38,10 +38,10 @@ Implemented today:
 - default sync scope: 2 recent sessions + all compaction summaries + last 5 commits + top 3 GitHub issues
 - deterministic git snapshot includes:
   - last 5 commits with hash, message, author, and relative date
-  - most touched files across recent commits
-  - uncommitted changes
+  - 10 most recently edited files across recent commits, with line additions/deletions
+  - uncommitted change count (use `git status` for the full list)
 - config lives at `~/.mind/config.yml`
-- API key is read from the environment only
+- API keys come from shell env and/or `~/.mind/.env` (+ optional `<project>/.env`), controlled by `api_key_source`
 - provider base URL is configurable for OpenAI-compatible backends
 
 ## Install
@@ -61,9 +61,12 @@ mind restore
 mind restore /path/to/project
 mind restore --force
 mind restore -f
+mind restore --inspect
 ```
 
 `restore` is the main command. If a cached digest exists, it is shown immediately. If not, `mind` performs a sync first.
+
+`--inspect` lists the local files `mind` would read for a digest and shows whether a cached digest exists, **without** calling a model or syncing.
 
 ### Sync sessions
 
@@ -72,26 +75,48 @@ mind sync
 mind sync /path/to/project
 mind sync --all
 mind sync -n 5
+mind sync --inspect
 ```
 
 By default, sync summarizes the 2 most recent sessions, plus all Claude compaction summaries, then regenerates the digest.
 
 `--all` processes every discovered session instead of only the recent subset.
 
+`--inspect` prints the same local file inventory `sync` would use, **without** writing SQLite rows or calling a model.
+
+### First-run diagnostics
+
+```bash
+mind doctor
+mind doctor --demo
+```
+
+`mind doctor` checks for a configured API key, `git` / `gh`, Claude Code / Codex / Cursor session directories, and your `~/.mind` layout, then prints a single suggested next step.
+
+`--demo` prints a bundled sample restore brief so you can see the output shape before any real project data exists on disk.
 ## How the project is organized
 
 The main code paths are small and easy to follow:
 
-- `mind/main.py` — Typer CLI entry points and project root resolution
+- `mind/main.py` — thin Typer app wiring
+- `mind/commands/` — command handlers split by workflow area
+- `mind/cli_helpers.py` — shared CLI root-detection and API-key helpers
+- `mind/doctor.py` — first-run environment diagnostics
+- `mind/read_sources.py` — local source enumeration for `--inspect` and provenance
+- `mind/redact.py` — secret redaction before model calls
 - `mind/sync.py` — session discovery, card creation, digest assembly
 - `mind/summarizer.py` — AI calls for session cards and restore digests
 - `mind/store.py` — SQLite storage for session cards, digests, and notes
 - `mind/display.py` — Rich output for restore views and progress
+- `mind/adapters/base.py` — shared session adapter contract
+- `mind/adapters/registry.py` — built-in adapter registration
 - `mind/adapters/claude_code.py` — Claude Code JSONL session parsing
 - `mind/adapters/codex.py` — Codex JSONL session parsing
 - `mind/adapters/cursor.py` — Cursor workspace storage parsing
 - `mind/adapters/project_files.py` — static docs, git snapshot, and GH issue extraction
 - `mind/config.py` — config file and environment loading
+
+See `ADAPTERS.md` for the extension contract and the steps to add a new session source.
 
 ## Configuration
 
@@ -103,9 +128,14 @@ The main code paths are small and easy to follow:
 
 Important rules:
 
-- API keys are never stored in the config file
-- the key must come from the environment
-- supported env vars:
+- API keys are never stored in `config.yml`.
+- Keys can come from **shell environment variables** and/or **dotenv files**:
+  - `~/.mind/.env` (global)
+  - `<project>/.env` (merged when `mind` resolves a project path)
+- Set `api_key_source` in `~/.mind/config.yml`:
+  - `env_first` (default) — shell wins, then dotenv files
+  - `dotenv_first` — dotenv files win, then shell
+- supported env vars / dotenv keys:
   - `ANTHROPIC_API_KEY`
   - `OPENAI_API_KEY`
   - `MIND_BASE_URL`
@@ -138,9 +168,31 @@ This makes repeated restores cheap: if the underlying session file has not chang
 `mind restore` combines two layers:
 
 1. **AI digest** — a structured brief built from sessions, docs, notes, and static context
-2. **Deterministic git snapshot** — recent commits, hot files, status, and GH issues
+2. **Deterministic git snapshot** — recent commits, recently edited files, dirty-tree count, and GH issues
 
 That split matters because the AI layer restores intent, while the deterministic layer restores facts.
+
+Each restore also prints a short **Sources & trust boundary** section that explains which artifacts came from SQLite, which project files are re-read on sync, and what is recomputed live from `git` / `gh`.
+It also calls out the freshness boundary explicitly: the AI digest is cached from the last sync, while the live Git snapshot is recomputed on every restore.
+
+## Trust, privacy, and provenance
+
+**What stays on disk locally**
+
+- Session cards and digests in `~/.mind/mind.db` (see **Data model**).
+- Optional API key material in `~/.mind/.env` and/or a project-level `.env` (never in `config.yml`).
+- Your agent tools’ own session files under `~/.claude/projects`, `~/.codex/sessions`, and Cursor workspace storage.
+- `mind` never writes back into those agent session files.
+
+**What leaves your machine**
+
+- Only the **summarization** and **digest** prompts sent to your configured provider (Anthropic by default, or an OpenAI-compatible `base_url`).
+- Before those calls, `mind` applies **best-effort redaction** for common secret patterns (API keys, GitHub tokens, `Bearer` headers, AWS access key ids, PEM private-key headers, etc.). This is not a guarantee against all leaks — treat transcripts like sensitive source code.
+
+**How to verify before you run anything costly**
+
+- `mind sync --inspect` / `mind restore --inspect` — enumerate inputs with no model calls.
+- `mind doctor` — confirm tooling and session directories exist.
 
 ## Development notes
 
@@ -159,4 +211,3 @@ That split matters because the AI layer restores intent, while the deterministic
 The goal is not to create a generic note-taking system.
 
 The goal is to make project re-entry cheap enough that context loss stops being a real cost.
-

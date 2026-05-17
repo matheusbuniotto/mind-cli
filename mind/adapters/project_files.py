@@ -1,7 +1,6 @@
 """Extract static context from a project directory."""
 
 import subprocess
-from collections import Counter
 from pathlib import Path
 
 
@@ -46,12 +45,23 @@ def _gh_issues(cwd: str, n: int = 3) -> str:
     return out
 
 
-def git_snapshot(cwd: str, commits: int = 5, hotfiles_commits: int = 20) -> dict:
+def _format_recent_file_change(additions: str, deletions: str) -> str:
+    if additions == deletions == "-":
+        return "binary"
+    return f"+{additions}/-{deletions}"
+
+
+def git_snapshot(
+    cwd: str,
+    commits: int = 5,
+    recent_files_commits: int = 20,
+    recent_files_limit: int = 10,
+) -> dict:
     """Return deterministic git data — no AI, no API cost.
 
     Keys:
       commits      list of dicts {hash, subject, author, date}
-      hotfiles     list of (filepath, change_count) sorted desc
+      recent_files list of dicts {path, additions, deletions} in recency order
       status       list of 'XY path' strings (uncommitted changes)
       issues       raw text of open GH issues (empty if no gh/remote)
     """
@@ -79,31 +89,54 @@ def git_snapshot(cwd: str, commits: int = 5, hotfiles_commits: int = 20) -> dict
                 }
             )
 
-    # --- hotfiles: files changed most often across last N commits ---
+    # --- recent files: latest edit for each file across recent commits ---
     files_out = _run(
         [
             "git",
             "log",
             "--no-merges",
-            f"-{hotfiles_commits}",
-            "--name-only",
-            "--pretty=format:",
+            f"-{recent_files_commits}",
+            "--pretty=format:__COMMIT__",
+            "--numstat",
         ],
         cwd=cwd,
     )
-    file_counts: Counter = Counter(f for f in files_out.splitlines() if f.strip())
-    hotfiles = file_counts.most_common(8)
+    recent_files = []
+    seen_paths = set()
+    for line in files_out.splitlines():
+        if not line.strip() or line == "__COMMIT__":
+            continue
+
+        parts = line.split("\t", 2)
+        if len(parts) != 3:
+            continue
+
+        additions, deletions, path = parts
+        if path in seen_paths:
+            continue
+
+        recent_files.append(
+            {
+                "path": path,
+                "additions": additions,
+                "deletions": deletions,
+            }
+        )
+        seen_paths.add(path)
+
+        if len(recent_files) >= recent_files_limit:
+            break
 
     # --- uncommitted changes ---
     status_out = _run(["git", "status", "--short"], cwd=cwd)
-    status = [l for l in status_out.splitlines() if l.strip()]
+    status = [line for line in status_out.splitlines() if line.strip()]
 
     # --- GH issues ---
     issues = _gh_issues(cwd, n=3)
 
     return {
         "commits": commit_list,
-        "hotfiles": hotfiles,
+        "recent_files": recent_files,
         "status": status,
         "issues": issues,
     }
@@ -138,14 +171,23 @@ def extract_project_context(cwd: str) -> str:
         ]
         parts.append("=== last 5 commits ===\n" + "\n".join(lines))
 
-    if snap["hotfiles"]:
-        lines = [f"{f} ({n}x)" for f, n in snap["hotfiles"]]
+    if snap["recent_files"]:
+        lines = [
+            f"{item['path']} "
+            f"({_format_recent_file_change(item['additions'], item['deletions'])})"
+            for item in snap["recent_files"]
+        ]
         parts.append(
-            "=== most touched files (last 20 commits) ===\n" + "\n".join(lines)
+            "=== 10 most recently edited files (last 20 commits) ===\n"
+            + "\n".join(lines)
         )
 
     if snap["status"]:
-        parts.append("=== git status ===\n" + "\n".join(snap["status"]))
+        noun = "file" if len(snap["status"]) == 1 else "files"
+        parts.append(
+            f"=== uncommitted changes ===\n{len(snap['status'])} {noun} changed; "
+            "run `git status` for details"
+        )
 
     if snap["issues"]:
         parts.append(f"=== open GitHub issues (top 3) ===\n{snap['issues']}")

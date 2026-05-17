@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "simplify-ai-architecture": {
+      "source": "matheusbuniotto/skills-library",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/simplify-ai-architecture/SKILL.md",
+      "computedHash": "5362f437129fc5fe34b2facf54e06469531c1667cc4b473438b38974abe8497e"
+    }
+  }
+}

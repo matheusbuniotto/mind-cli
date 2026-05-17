@@ -181,10 +181,10 @@ If I were prioritizing for adoption, I would do this in order:
 
 | Order | Initiative | Priority | Level | Brief / plan | Status |
 | --- | --- | --- | --- | --- | --- |
-| 1 | First-run experience | P0 | M | Add `mind doctor`, actionable setup diagnostics, and a demo path that shows value before real data exists. | to-do |
-| 2 | Trust and safety | P0 | M | Add `--inspect` / dry-run, make data provenance visible, document storage vs model-bound data, and introduce redaction rules. | to-do |
+| 1 | First-run experience | P0 | M | Add `mind doctor`, actionable setup diagnostics, and a demo path that shows value before real data exists. | done |
+| 2 | Trust and safety | P0 | M | Add `--inspect` / dry-run, make data provenance visible, document storage vs model-bound data, and introduce redaction rules. | done |
 | 3 | Proof of value in the output | P0 | M | Tighten the restore brief, emphasize blockers / next actions, and add a compact “changed since last sync” section. | to-do |
-| 4 | Adapter extensibility | P1 | L | Define adapter contracts, add a registry, move built-ins behind the interface, and document how to add `pi-agent`, `opencode`, or future sources. | to-do |
+| 4 | Adapter extensibility | P1 | L | Define adapter contracts, add a registry, move built-ins behind the interface, and document how to add `pi-agent`, `opencode`, or future sources. | done |
 | 5 | Reliability and verifiability | P1 | M | Add fixture-based tests for adapters and snapshots, then wire CI around the core flow. | to-do |
 | 6 | Distribution and package polish | P1 | S | Add `--version`, public install docs, release checklist, and complete package metadata for broader distribution. | to-do |
 | 7 | Contribution surface | P2 | S | Add `CONTRIBUTING.md`, fixture docs, and clearly scoped good-first issues for adapters and tests. | to-do |
@@ -197,13 +197,10 @@ If I were prioritizing for adoption, I would do this in order:
 
 ## Concrete next work items
 
-- add a `mind doctor` command
-- define the adapter contract and registry
 - add fixture-based tests for the adapters and snapshot rendering
-- add a `--dry-run` or `--inspect` mode
 - add a CI workflow
 - add a minimal contributor guide
-- add a sample/demo mode for README and screenshots
+- tighten restore output for “proof of value” (item 3)
 
 ## Notes on current gaps
 
@@ -211,9 +208,6 @@ The repo currently has:
 
 - no `tests/` directory
 - no CI workflow
-- no `mind doctor` or `--inspect` command
-- no explicit redaction layer
-- no visible sample output fixtures
-- built-in adapters are wired directly into `sync.py` instead of through a common extension interface
+- no visible sample output fixtures (beyond `mind doctor --demo`)
 
-That means the core product is present, but adoption polish is still missing.
+That means the core product is present, but several adoption and contribution mechanics are still missing.

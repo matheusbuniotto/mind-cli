@@ -2,9 +2,11 @@
 
 import hashlib
 import json
+import time
 from pathlib import Path
 
 from ..config import CODEX_SESSIONS_DIR
+from .base import AdapterInspectStats, SessionCardCandidate, SessionRef
 
 
 def get_session_files() -> list[Path]:
@@ -95,3 +97,95 @@ def sessions_for_cwd(cwd: str) -> list[Path]:
         if session_cwd and (session_cwd == cwd or session_cwd.startswith(cwd + "/")):
             result.append(f)
     return result
+
+
+class CodexAdapter:
+    """Codex session adapter for cwd-matched JSONL transcripts."""
+
+    name = "codex"
+
+    def discover(self, cwd: str) -> list[SessionRef]:
+        sessions: list[SessionRef] = []
+        for rank, session_file in enumerate(get_session_files()[:50]):
+            _, date, session_cwd = extract_session_text(session_file, max_chars=0)
+            if not session_cwd:
+                continue
+            if session_cwd != cwd and not session_cwd.startswith(cwd + "/"):
+                continue
+            sessions.append(
+                SessionRef(
+                    source=self.name,
+                    session_id=session_file.stem,
+                    path=session_file,
+                    date=date,
+                    active=_is_active(session_file),
+                    cwd=session_cwd,
+                    metadata={"rank": rank},
+                )
+            )
+        return sessions
+
+    def active_context(
+        self,
+        cwd: str,
+        sessions: list[SessionRef],
+        *,
+        max_chars: int,
+    ) -> list[str]:
+        parts = []
+        for session in sessions:
+            if not session.active or session.path is None:
+                continue
+            rank = int(session.metadata.get("rank", 999))
+            if rank >= 20:
+                continue
+            text, date, _ = extract_session_text(session.path, max_chars=max_chars)
+            if text.strip():
+                parts.append(f"[ACTIVE codex session | {date}]\n{text}")
+        return parts
+
+    def card_candidates(
+        self,
+        cwd: str,
+        sessions: list[SessionRef],
+        *,
+        session_limit: int,
+    ) -> list[SessionCardCandidate]:
+        candidates: list[SessionCardCandidate] = []
+        for session in _closed_sessions(sessions)[:session_limit]:
+            assert session.path is not None
+            text, date, _ = extract_session_text(session.path)
+            if not text.strip():
+                continue
+            fhash = file_hash(session.path)
+            candidates.append(
+                SessionCardCandidate(
+                    card_id=f"codex:{session.path.stem}:{fhash}",
+                    source=self.name,
+                    text=text,
+                    date=date,
+                    session_file=str(session.path),
+                    file_hash=fhash,
+                )
+            )
+        return candidates
+
+    def inspect_stats(
+        self,
+        cwd: str,
+        sessions: list[SessionRef],
+        *,
+        session_limit: int,
+    ) -> AdapterInspectStats:
+        return AdapterInspectStats(
+            source=self.name,
+            api_window_count=len(_closed_sessions(sessions)[:session_limit]),
+        )
+
+
+def _is_active(path: Path) -> bool:
+    return (time.time() - path.stat().st_mtime) < 30 * 60
+
+
+def _closed_sessions(sessions: list[SessionRef]) -> list[SessionRef]:
+    return [s for s in sessions if not s.active and s.path is not None]
