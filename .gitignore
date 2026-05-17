@@ -24,6 +24,7 @@ Thumbs.db
 .pi-lens/
 .agents/
 .claude/
+.social/
 
 # Environment
 .env

@@ -1,63 +1,55 @@
 # mind
 
-`mind` is a frictionless AI project context recovery CLI for Claude Code, Codex, and Cursor.
+`mind` restores the mental state of an AI-assisted coding project after you have been away from it.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/matheusbuniotto/mind-cli/ci.yml?branch=main)](https://github.com/matheusbuniotto/mind-cli/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/matheusbuniotto/mind-cli)](https://github.com/matheusbuniotto/mind-cli/releases)
 
-It solves a specific problem: when you switch away from a project for days or weeks, you lose the project’s mental state - what was built, what was decided, what is blocked, and what should happen next. `mind` reconstructs that state in about two minutes with zero manual note-taking.
+When you come back to a repo after a few days, you usually need to reconstruct:
 
-It is terminal-first, uses a Rich TUI, and is installed as a local tool with `uv tool install`.
+- what the project is trying to do
+- what already shipped
+- what you were in the middle of
+- what is blocked
+- what to do next
 
-## Why People Use It
+`mind` rebuilds that picture from your real Claude Code, Codex, and Cursor history plus the repo itself, then gives you a restore brief in the terminal.
 
-- restore project context from real session transcripts, not just markdown notes
-- recap Claude Code, Codex, and Cursor work in one place
-- inspect provenance before any model call
-- keep private session data local while still getting a high-signal project brief
-- reduce the time it takes to return to a paused AI-assisted project
+## The problem
 
-## What it does
+AI coding tools remember a session. You still have to remember the project.
 
-`mind` collects context from:
+If you bounce between projects, context loss becomes a hidden tax: rereading diffs, reopening tabs, scanning chats, rediscovering blockers, and asking the model to infer what you already knew last week.
 
-- Claude Code sessions
-- Codex sessions
-- Cursor workspace chat history
-- recent git history
-- uncommitted changes
-- open GitHub issues
-- project docs like `README.md`, `CLAUDE.md`, `AGENTS.md`
-- `.spec/log.md`
-- Claude memory files under `~/.claude/projects/.../memory`
+`mind` is for that re-entry moment.
 
-It then builds a restore brief that is meant to answer:
+## Who this is for
 
-1. What is this project trying to do?
-2. What is already done?
-3. What was in progress when work paused?
-4. What should I do next?
+`mind` is useful if you work across several projects, return to repos after days or weeks away, or use multiple AI coding tools and keep paying the cost of reconstructing project state before you can make progress again.
 
-## Current status
+## What you get
 
-This repo is the active `mind` CLI.
+- a structured restore brief instead of a chat-log archaeology session
+- one recap across Claude Code, Codex, and Cursor
+- current git facts separated from AI-generated summaries
+- a trust boundary you can inspect before sending anything to a model
+- a compact social handoff when you want to share project status
 
-Implemented today:
+Example workflow:
 
-- `mind sync <project>` extracts Claude Code and Codex session cards, builds an AI digest, and caches by file hash
-- `mind restore <project>` shows the digest plus a deterministic git snapshot
-- default sync scope: 2 recent sessions + all compaction summaries + last 5 commits + top 3 GitHub issues
-- deterministic git snapshot includes:
-  - last 5 commits with hash, message, author, and relative date
-  - 10 most recently edited files across recent commits, with line additions/deletions
-  - uncommitted change count (use `git status` for the full list)
-- config lives at `~/.mind/config.yml`
-- API keys come from shell env and/or `~/.mind/.env` (+ optional `<project>/.env`), controlled by `api_key_source`
-- provider base URL is configurable for OpenAI-compatible backends
+```bash
+mind sync
+# leave the project for a week
+mind restore
+```
 
-## Install
+If you just want to see the shape before using real data:
 
-### One command
+```bash
+mind doctor --demo
+```
+
+## Try it
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/matheusbuniotto/mind-cli/main/install.sh | sh
@@ -65,7 +57,7 @@ curl -LsSf https://raw.githubusercontent.com/matheusbuniotto/mind-cli/main/insta
 
 The installer adds `uv` if needed, installs `mind-cli` with `uv tool install`, then prints the next command to run.
 
-### Package managers
+Or install it directly:
 
 ```bash
 # recommended
@@ -88,7 +80,37 @@ mind init          # first time: config wizard + skill + hooks
 mind install -y    # refresh skill + hooks only
 ```
 
-### Agent integrations (skill + hook)
+## What it reads
+
+`mind` collects context from:
+
+- Claude Code sessions
+- Codex sessions
+- Cursor workspace chat history
+- recent git history
+- uncommitted changes
+- open GitHub issues
+- project docs like `README.md`, `CLAUDE.md`, `AGENTS.md`
+- `.spec/log.md`
+- Claude memory files under `~/.claude/projects/.../memory`
+
+It then builds a restore brief that answers:
+
+1. What is this project trying to do?
+2. What is already done?
+3. What was in progress when work paused?
+4. What should I do next?
+
+## Built for trust
+
+- `mind restore --inspect` shows what would be read before any model call
+- the restore view separates AI summaries from live git facts
+- session transcripts and project context are redacted for common secret patterns before provider calls
+- API keys stay out of `config.yml`
+
+See [Trust, privacy, and provenance](#trust-privacy-and-provenance) for the full boundary.
+
+## Agent integrations
 
 `mind` ships a **mind-recap** skill and a **session-start hook** that runs `mind check` (no LLM — only git/session staleness).
 
@@ -103,13 +125,6 @@ mind install --skill          # skill only
 mind install --hook           # hook only
 mind init --no-agents         # config only, skip skill/hooks
 ```
-
-## Releases
-
-Tagged releases are built and validated in CI, published to PyPI through GitHub trusted publishing, and mirrored to GitHub Releases.
-That keeps the install path to one command while still giving the community an auditable place to grab versioned artifacts.
-
-See [`RELEASING.md`](RELEASING.md) for the first-release checklist and the exact commands to cut a public version.
 
 | Agent | Skill path | Hook |
 |-------|------------|------|
@@ -126,7 +141,7 @@ npx skills add matheusbuniotto/skills-library --skill mind-recap -a claude-code 
 When the user asks for a recap, the skill runs `mind restore` and asks before `mind sync`.
 Hooks nudge on session start when the digest is missing, old, or git/sessions drifted (run `/hooks` in Codex to trust new hooks).
 
-## Usage
+## Core commands
 
 ### Restore context
 
@@ -186,6 +201,12 @@ mind doctor --demo
 `mind doctor` checks for a configured API key, `git` / `gh`, Claude Code / Codex / Cursor session directories, and your `~/.mind` layout, then prints a single suggested next step.
 
 `--demo` prints a bundled sample restore brief so you can see the output shape before any real project data exists on disk.
+
+## Releases
+
+Tagged releases are built and validated in CI, published to PyPI through GitHub trusted publishing, and mirrored to GitHub Releases.
+See [`RELEASING.md`](RELEASING.md) for the release process.
+
 ## How the project is organized
 
 The main code paths are small and easy to follow:
