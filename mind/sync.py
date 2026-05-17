@@ -124,10 +124,8 @@ def build_digest(
         for c in cards
     )
 
-    notes_row = store.get_notes(cwd)
-    notes_section = (
-        f"\n\n=== Manual Notes ===\n{notes_row['notes']}" if notes_row else ""
-    )
+    notes_text = store.format_notes_for_context(cwd)
+    notes_section = f"\n\n=== Manual Notes ===\n{notes_text}" if notes_text else ""
 
     active_section = (
         f"\n\n=== ACTIVE SESSION (live, not cached) ===\n{active_text}"

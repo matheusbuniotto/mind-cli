@@ -111,6 +111,7 @@ If a step has a clear owner or dependency, note it. Keep each item to one short 
 
 ## Notes & Ideas
 0-4 concise bullets: manual notes, ideas mentioned, future features to explore.
+If Manual Notes exist in the context, surface the key notes here as well.
 
 Be specific. Use filenames, function names, issue numbers, commit hashes where known. \
 Prefer a complete brief over an exhaustive one: never let an early section become so verbose that later sections are cut off. \

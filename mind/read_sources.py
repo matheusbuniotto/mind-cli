@@ -115,6 +115,8 @@ def build_restore_provenance_markdown(cwd: str) -> str:
         src = c["source"]
         counts[src] = counts.get(src, 0) + 1
 
+    notes = store.list_notes(cwd)
+
     lines: list[str] = [
         "### Data sources for this digest",
         "",
@@ -143,6 +145,17 @@ def build_restore_provenance_markdown(cwd: str) -> str:
         lines.append(
             "- _(none of README.md / CLAUDE.md / AGENTS.md / .spec/log.md / memory found)_"
         )
+
+    lines.extend(
+        [
+            "",
+            "**Manual notes** (stored locally in SQLite)",
+        ]
+    )
+    if notes:
+        lines.append(f"- `{len(notes)}` note(s) added with `mind note`")
+    else:
+        lines.append("- _(none yet — run `mind note` to add one)_")
 
     lines.extend(
         [

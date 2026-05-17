@@ -195,6 +195,20 @@ The restore view now also adds a compact **Since last sync** diff and a **Restor
 - `mind sync --inspect` / `mind restore --inspect` — enumerate inputs with no model calls.
 - `mind doctor` — confirm tooling and session directories exist.
 
+## Manual notes
+
+```bash
+mind note "remember to revisit this API"
+mind note
+mind note --clean
+mind notes
+```
+
+`mind note "..."` appends a timestamped project note.
+`mind note` opens an interactive menu so you can add a note, view existing notes, or delete selected notes.
+`mind note --clean` deletes all notes for the project after confirmation.
+`mind notes` prints the current note list.
+
 ## Development notes
 
 - Python requirement: `>=3.11`

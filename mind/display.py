@@ -11,6 +11,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from . import store
 from .read_sources import SyncReadPlan
 
 console = Console()
@@ -59,9 +60,11 @@ def show_restore(
                 padding=(0, 1),
             )
         )
+    notes = store.list_notes(cwd)
     current_head = _run(["git", "rev-parse", "HEAD"], cwd=cwd)
     snap = git_snapshot(cwd)
     _show_digest_freshness(synced_commit=synced_commit, current_head=current_head)
+    show_notes(notes, title="Manual Notes")
     _show_restore_highlights(digest)
     _show_since_last_sync(
         synced_commit=synced_commit,
@@ -190,7 +193,8 @@ def _show_since_last_sync(
         noun = "file" if len(status) == 1 else "files"
         dirty_paths = []
         for line in status[:5]:
-            path = line[3:] if len(line) > 3 else line
+            parts = line.split(maxsplit=1)
+            path = parts[1] if len(parts) == 2 else line
             dirty_paths.append(path.strip())
         detail = ", ".join(dirty_paths) if dirty_paths else "see `git status`"
         lines.append(f"- uncommitted now: {len(status)} {noun} dirty ({detail})")
@@ -200,6 +204,29 @@ def _show_since_last_sync(
             Markdown("\n".join(lines)),
             title="[bold]Since last sync[/bold]",
             border_style="magenta",
+            padding=(0, 1),
+        )
+    )
+
+
+def show_notes(notes: list[dict], *, title: str = "Project Notes") -> None:
+    if not notes:
+        return
+
+    body = Text()
+    for idx, row in enumerate(notes[:10]):
+        timestamp = str(row["created_at"])[:16].replace("T", " ")
+        text = str(row["note_text"]).strip()
+        body.append(f"[{timestamp}] ", style="dim")
+        body.append(text or "(empty)")
+        if idx < min(len(notes), 10) - 1:
+            body.append("\n\n")
+
+    console.print(
+        Panel(
+            body,
+            title=f"[bold]{title}[/bold]",
+            border_style="cyan",
             padding=(0, 1),
         )
     )
