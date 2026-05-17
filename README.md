@@ -46,11 +46,55 @@ Implemented today:
 
 ## Install
 
-This project is meant to be installed locally from the repo:
+```bash
+# from PyPI (recommended)
+uv tool install mind-cli
+# or with pip
+pip install mind-cli
+```
 
 ```bash
-uv tool install /Users/matheus/Awesome-tools/mind
+# from source (dev / latest)
+git clone https://github.com/matheusbuniotto/mind-cli
+uv tool install ./mind-cli
 ```
+
+```bash
+mind init          # first time: config wizard + skill + hooks
+# after upgrading mind:
+mind install -y    # refresh skill + hooks only
+```
+
+### Agent integrations (skill + hook)
+
+`mind` ships a **mind-recap** skill and a **session-start hook** that runs `mind check` (no LLM — only git/session staleness).
+
+| Command | When |
+|---------|------|
+| `mind init` | First run — config wizard + install skill/hooks |
+| `mind install -y` | After `uv tool install` upgrade — refresh skill/hooks only |
+
+```bash
+mind install -y               # refresh skill + hook (auto-detect agents)
+mind install --skill          # skill only
+mind install --hook           # hook only
+mind init --no-agents         # config only, skip skill/hooks
+```
+
+| Agent | Skill path | Hook |
+|-------|------------|------|
+| Claude Code | `~/.claude/skills/mind-recap/` | `SessionStart` → `~/.claude/hooks/mind-check.sh` |
+| Cursor | `~/.cursor/skills/mind-recap/` | `sessionStart` → `~/.cursor/hooks/mind-check.sh` |
+| Codex | `~/.codex/skills/` + `~/.agents/skills/` | `SessionStart` → `~/.codex/hooks/mind-check.sh` |
+
+**Without the `mind` CLI** — install the skill from [matheusbuniotto/skills-library](https://github.com/matheusbuniotto/skills-library):
+
+```bash
+npx skills add matheusbuniotto/skills-library --skill mind-recap -a claude-code -a cursor -a codex -g -y
+```
+
+When the user asks for a recap, the skill runs `mind restore` and asks before `mind sync`.
+Hooks nudge on session start when the digest is missing, old, or git/sessions drifted (run `/hooks` in Codex to trust new hooks).
 
 ## Usage
 
@@ -83,6 +127,14 @@ By default, sync summarizes the 2 most recent sessions, plus all Claude compacti
 `--all` processes every discovered session instead of only the recent subset.
 
 `--inspect` prints the same local file inventory `sync` would use, **without** writing SQLite rows or calling a model.
+
+### Check context freshness (no API)
+
+```bash
+mind check
+mind check --quiet    # for scripts / hooks
+mind check --json
+```
 
 ### First-run diagnostics
 

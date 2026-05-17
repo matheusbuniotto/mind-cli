@@ -1,0 +1,2 @@
+{"type":"user","timestamp":"2025-01-14T09:00:00Z","message":{"role":"user","content":"This session is being continued from a previous conversation that ran out of context. The summary covers: implemented the database migration for users table, added indexes on email and created_at columns, fixed the N+1 query in list_users endpoint."}}
+{"type":"assistant","timestamp":"2025-01-14T09:00:05Z","message":{"role":"assistant","content":[{"type":"text","text":"Thanks for the context. I can see the migration work is done. What would you like to tackle next?"}]}}

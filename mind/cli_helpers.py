@@ -70,6 +70,7 @@ def require_api_key(project_cwd: str | None = None) -> None:
     if not cfg.get("api_key"):
         display.show_error(
             "No API key found. Configure one of:\n"
+            "  • Wizard: run mind init (paste into ~/.mind/.env; hidden input; chmod 0600)\n"
             "  • Shell: export ANTHROPIC_API_KEY=sk-ant-...  or  OPENAI_API_KEY=...\n"
             "  • Files: ~/.mind/.env and/or <project>/.env (see README)\n"
             "  • Priority: set api_key_source in ~/.mind/config.yml to env_first or dotenv_first\n\n"
