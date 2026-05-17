@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mind-cli"
+version = "0.1.0"
+description = "Frictionless AI project context manager — restore your mind state in 2 minutes"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13",
+    "anthropic>=0.40",
+    "openai>=1.30",
+    "pyyaml>=6",
+    "python-dateutil>=2.9",
+    "questionary>=2.0",
+]
+
+[project.scripts]
+mind = "mind.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mind"]
