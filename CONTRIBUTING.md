@@ -17,6 +17,16 @@ uv run pytest tests/ -v
 uv run ruff check mind/ tests/
 ```
 
+## Local installer test
+
+To test the public installer flow without changing the script URL:
+
+```bash
+sh ./install.sh
+```
+
+The script should install `uv` only when missing, install `mind-cli` through `uv tool install`, print `mind --version`, and end with `mind init` as the next step.
+
 ## Running tests
 
 ```bash
@@ -75,6 +85,23 @@ tests/
 - All tests must pass (`uv run pytest tests/`).
 - Lint must pass (`uv run ruff check mind/ tests/`).
 - New adapters need at least one fixture and one test class.
+
+## Releases
+
+Release tags follow the `vX.Y.Z` pattern.
+
+Before tagging a release:
+
+```bash
+uv sync --all-groups --locked
+uv run ruff check mind tests
+uv run pytest -q
+uv build
+```
+
+The release workflow publishes the source and wheel artifacts from `dist/` to PyPI via GitHub trusted publishing, then mirrors them to GitHub Releases.
+Before the first release, configure the PyPI trusted publisher for this repository so the workflow can exchange GitHub's OIDC token without storing a long-lived API token in the repo.
+See `RELEASING.md` for the exact first-release checklist and commands.
 
 ## Good first issues
 

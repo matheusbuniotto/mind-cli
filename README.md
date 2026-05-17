@@ -1,10 +1,21 @@
 # mind
 
-`mind` is a frictionless CLI context manager for AI-assisted development.
+`mind` is a frictionless AI project context recovery CLI for Claude Code, Codex, and Cursor.
 
-It exists to solve a specific problem: when you switch away from a project for days or weeks, you lose the project’s mental state — what was built, what was decided, what is blocked, and what should happen next. `mind` reconstructs that state in about two minutes with zero manual note-taking.
+[![CI](https://img.shields.io/github/actions/workflow/status/matheusbuniotto/mind-cli/ci.yml?branch=main)](https://github.com/matheusbuniotto/mind-cli/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/matheusbuniotto/mind-cli)](https://github.com/matheusbuniotto/mind-cli/releases)
+
+It solves a specific problem: when you switch away from a project for days or weeks, you lose the project’s mental state - what was built, what was decided, what is blocked, and what should happen next. `mind` reconstructs that state in about two minutes with zero manual note-taking.
 
 It is terminal-first, uses a Rich TUI, and is installed as a local tool with `uv tool install`.
+
+## Why People Use It
+
+- restore project context from real session transcripts, not just markdown notes
+- recap Claude Code, Codex, and Cursor work in one place
+- inspect provenance before any model call
+- keep private session data local while still getting a high-signal project brief
+- reduce the time it takes to return to a paused AI-assisted project
 
 ## What it does
 
@@ -46,10 +57,22 @@ Implemented today:
 
 ## Install
 
+### One command
+
 ```bash
-# from PyPI (recommended)
+curl -LsSf https://raw.githubusercontent.com/matheusbuniotto/mind-cli/main/install.sh | sh
+```
+
+The installer adds `uv` if needed, installs `mind-cli` with `uv tool install`, then prints the next command to run.
+
+### Package managers
+
+```bash
+# recommended
 uv tool install mind-cli
-# or with pip
+
+# alternatives
+uvx mind-cli --help
 pip install mind-cli
 ```
 
@@ -80,6 +103,13 @@ mind install --skill          # skill only
 mind install --hook           # hook only
 mind init --no-agents         # config only, skip skill/hooks
 ```
+
+## Releases
+
+Tagged releases are built and validated in CI, published to PyPI through GitHub trusted publishing, and mirrored to GitHub Releases.
+That keeps the install path to one command while still giving the community an auditable place to grab versioned artifacts.
+
+See [`RELEASING.md`](RELEASING.md) for the first-release checklist and the exact commands to cut a public version.
 
 | Agent | Skill path | Hook |
 |-------|------------|------|
@@ -136,6 +166,16 @@ mind check --quiet    # for scripts / hooks
 mind check --json
 ```
 
+### Share a social brief
+
+```bash
+mind share --social
+mind share --social --no-clip
+```
+
+`mind share --social` creates a compact markdown update designed for Slack, Discord, GitHub, or social posts.
+It keeps only the high-signal status, next steps, blockers, and a short change summary since the last sync.
+
 ### First-run diagnostics
 
 ```bash
@@ -169,6 +209,8 @@ The main code paths are small and easy to follow:
 - `mind/config.py` — config file and environment loading
 
 See `ADAPTERS.md` for the extension contract and the steps to add a new session source.
+
+If you want to contribute, start with [`CONTRIBUTING.md`](CONTRIBUTING.md). It covers local setup, tests, linting, adapter extensions, and a short list of good first issues.
 
 ## Configuration
 
