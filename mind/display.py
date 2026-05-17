@@ -294,6 +294,19 @@ def show_project_list(projects: list[dict]):
     console.print()
 
 
+def show_notes(notes: list) -> None:
+    t = Table(box=box.SIMPLE, show_header=True, header_style="dim", padding=(0, 1))
+    t.add_column("id", style="dim", no_wrap=True, width=7)
+    t.add_column("date", style="dim", no_wrap=True, width=16)
+    t.add_column("note")
+    for row in notes:
+        short_id = str(row["id"])[:6]
+        date = str(row["created_at"])[:16].replace("T", " ")
+        t.add_row(short_id, date, str(row["note_text"]))
+    console.print()
+    console.print(t)
+
+
 def show_progress(msg: str):
     console.print(f"  [dim]→ {msg}[/dim]")
 

@@ -103,6 +103,12 @@ def note(
     path: Optional[str] = typer.Option(
         None, "--path", "-p", help="Project path (default: cwd)"
     ),
+    delete: Optional[str] = typer.Option(
+        None,
+        "--delete",
+        "-d",
+        help="Delete note by ID prefix (see `mind notes` for IDs)",
+    ),
     clean: bool = typer.Option(
         False,
         "--clean",
@@ -113,13 +119,28 @@ def note(
     ensure_dirs()
     cwd = resolve_cwd(path)
 
+    if delete:
+        all_notes = store.list_notes(cwd)
+        matches = [r for r in all_notes if str(r["id"]).startswith(delete)]
+        if not matches:
+            display.show_error(f"No note found with id prefix '{delete}'.")
+            raise typer.Exit(1)
+        if len(matches) > 1:
+            display.show_error(
+                f"Ambiguous prefix '{delete}' matches {len(matches)} notes — use more characters."
+            )
+            raise typer.Exit(1)
+        store.delete_notes(cwd, [matches[0]["id"]])
+        display.show_success(f"Deleted note {delete}.")
+        return
+
     if clean:
-        notes = store.list_notes(cwd)
-        if not notes:
+        all_notes = store.list_notes(cwd)
+        if not all_notes:
             display.show_progress("No notes to clean.")
             return
         confirm = typer.confirm(
-            f"Delete all {len(notes)} note(s) for {Path(cwd).name}?",
+            f"Delete all {len(all_notes)} note(s) for {Path(cwd).name}?",
             default=False,
         )
         if not confirm:
