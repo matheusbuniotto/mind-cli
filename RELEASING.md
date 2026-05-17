@@ -41,9 +41,6 @@ git fetch origin
 git switch main
 git pull --ff-only origin main
 
-# Merge the release-ready branch once it has been reviewed.
-git merge --ff-only fix/open-permissions-and-set-key
-
 uv sync --all-groups --locked
 uv run ruff check mind tests
 uv run pytest -q
@@ -52,6 +49,12 @@ uv build
 git tag -a v0.1.0 -m "v0.1.0"
 git push origin main
 git push origin v0.1.0
+```
+
+If the release work is still on a reviewed topic branch instead of `main`, fast-forward `main` first:
+
+```bash
+git merge --ff-only <release-branch>
 ```
 
 Pushing `v0.1.0` starts `.github/workflows/release.yml`, which will:
