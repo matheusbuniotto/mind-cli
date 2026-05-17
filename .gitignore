@@ -22,6 +22,8 @@ Thumbs.db
 # Tools
 .ruff_cache/
 .pi-lens/
+.agents/
+.claude/
 
 # Environment
 .env
