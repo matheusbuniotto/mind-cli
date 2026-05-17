@@ -24,6 +24,12 @@ def restore(
         "--inspect",
         help="List local files/commands that would be read; no model calls",
     ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Full output: provenance, full digest, recent files",
+    ),
 ):
     """Restore your mental context for a project. The core command."""
     ensure_dirs()
@@ -46,6 +52,17 @@ def restore(
         console.print()
         return
 
+    def _show(row: dict) -> None:
+        display.show_restore(
+            cwd,
+            row["digest_text"],
+            row["generated_at"],
+            provenance_md=build_restore_provenance_markdown(cwd),
+            synced_commit=row["synced_commit"],
+            notes=store.list_notes(cwd),
+            verbose=verbose,
+        )
+
     if force:
         require_api_key(cwd)
         display.show_progress("Syncing sessions…")
@@ -56,13 +73,7 @@ def restore(
     else:
         row = store.get_digest(cwd)
         if row:
-            display.show_restore(
-                cwd,
-                row["digest_text"],
-                row["generated_at"],
-                provenance_md=build_restore_provenance_markdown(cwd),
-                synced_commit=row["synced_commit"],
-            )
+            _show(row)
             return
         require_api_key(cwd)
         display.show_progress(f"No cached digest found. Syncing {cwd}…")
@@ -76,13 +87,7 @@ def restore(
 
     row = store.get_digest(cwd)
     if row:
-        display.show_restore(
-            cwd,
-            row["digest_text"],
-            row["generated_at"],
-            provenance_md=build_restore_provenance_markdown(cwd),
-            synced_commit=row["synced_commit"],
-        )
+        _show(row)
 
 
 def sync_cmd(

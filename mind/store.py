@@ -45,7 +45,6 @@ def _init(conn: sqlite3.Connection):
         );
 
         CREATE INDEX IF NOT EXISTS idx_cards_cwd ON session_cards(project_cwd);
-        CREATE INDEX IF NOT EXISTS idx_notes_cwd ON project_notes(project_cwd);
     """)
     # safe column migration for existing DBs
     cols = {r[1] for r in conn.execute("PRAGMA table_info(project_digests)")}
@@ -82,6 +81,9 @@ def _init(conn: sqlite3.Connection):
                 (f"legacy:{row['cwd']}", row["cwd"], note_text, created_at),
             )
         conn.execute("DROP TABLE project_notes_legacy")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_notes_cwd ON project_notes(project_cwd)"
+    )
     conn.commit()
 
 

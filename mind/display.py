@@ -11,10 +11,14 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from . import store
 from .read_sources import SyncReadPlan
 
 console = Console()
+
+# Catppuccin Mocha accent — used sparingly
+_ACCENT = "#cba6f7"
+_GREEN = "#a6e3a1"
+_RED = "#f38ba8"
 
 
 def show_restore(
@@ -24,6 +28,8 @@ def show_restore(
     *,
     provenance_md: str | None = None,
     synced_commit: str | None = None,
+    notes: list | None = None,
+    verbose: bool = False,
 ):
     from .adapters.project_files import _run, git_diff_summary, git_snapshot
 
@@ -44,61 +50,68 @@ def show_restore(
             age = generated_at[:10]
 
     header = Text()
-    header.append("⟳ mind restore  ", style="bold cyan")
+    header.append("mind restore  ", style=f"bold {_ACCENT}")
     header.append(project_name, style="bold white")
     if age:
-        header.append(f"  · synced {age}", style="dim")
+        header.append(f"  · {age}", style="dim")
 
     console.print()
-    console.print(Panel(header, border_style="cyan", padding=(0, 2)))
-    if provenance_md:
+    console.print(Panel(header, border_style=_ACCENT, padding=(0, 2)))
+
+    current_head = _run(["git", "rev-parse", "HEAD"], cwd=cwd)
+    snap = git_snapshot(cwd)
+
+    if verbose and provenance_md:
         console.print(
             Panel(
                 Markdown(provenance_md),
-                title="[dim]Sources & trust boundary[/dim]",
+                title="[dim]sources[/dim]",
                 border_style="dim",
                 padding=(0, 1),
             )
         )
-    notes = store.list_notes(cwd)
-    current_head = _run(["git", "rev-parse", "HEAD"], cwd=cwd)
-    snap = git_snapshot(cwd)
+
     _show_digest_freshness(synced_commit=synced_commit, current_head=current_head)
-    show_notes(notes, title="Manual Notes")
-    _show_restore_highlights(digest)
     _show_since_last_sync(
         synced_commit=synced_commit,
         current_head=current_head,
         diff=git_diff_summary(cwd, synced_commit or "", current_head or ""),
         dirty_files=snap,
     )
-    console.print(Markdown(digest))
 
-    # --- deterministic git section (live, no AI) ---
-    _show_git_snapshot(snap)
+    if verbose:
+        # Full markdown digest — no extracted highlights, avoids duplication
+        console.rule(f"[{_ACCENT}]digest[/{_ACCENT}]", style=_ACCENT)
+        console.print()
+        console.print(Markdown(digest))
+        if notes or []:
+            console.rule(f"[{_ACCENT}]notes[/{_ACCENT}]", style=_ACCENT)
+            console.print()
+            for row in notes or []:
+                text = str(row["note_text"]).strip()
+                text = re.sub(r"^\[\d{4}-\d{2}-\d{2}[^\]]*\]\s*", "", text)
+                ts = str(row["created_at"] if "created_at" in row.keys() else "")[:10]
+                console.print(f"    [{_ACCENT}]·[/{_ACCENT}] [dim]{ts}[/dim]  {text}")
+            console.print()
+    else:
+        _show_restore_highlights(digest, notes=notes or [])
+
+    _show_git_snapshot(snap, verbose=verbose)
     console.print()
 
 
 def _show_digest_freshness(*, synced_commit: str | None, current_head: str) -> None:
-    """Explain the cached-vs-live boundary before rendering the brief."""
     if synced_commit and current_head and synced_commit != current_head:
         console.print(
             Panel(
-                "AI digest was synced at "
-                f"[yellow]{synced_commit[:7]}[/yellow], but repo HEAD is now "
-                f"[yellow]{current_head[:7]}[/yellow]. "
-                "The live snapshot below is current; run `mind restore --force` "
-                "to refresh the brief.",
-                title="[yellow]Freshness[/yellow]",
-                border_style="yellow",
+                f"Digest at [dim]{synced_commit[:7]}[/dim], HEAD is "
+                f"[dim]{current_head[:7]}[/dim]. "
+                "Run `mind restore --force` to refresh.",
+                title="[dim]stale[/dim]",
+                border_style="dim",
                 padding=(0, 1),
             )
         )
-        return
-
-    console.print(
-        "[dim]AI digest is cached from the last sync; the live Git snapshot below is recomputed on every restore.[/dim]\n"
-    )
 
 
 def _extract_digest_sections(digest: str) -> dict[str, list[str]]:
@@ -119,50 +132,48 @@ def _extract_digest_sections(digest: str) -> dict[str, list[str]]:
     return sections
 
 
-def _section_panel(title: str, items: list[str], border_style: str) -> Panel:
-    text = "\n".join(f"- {item}" for item in items[:3]) or "- (none)"
-    return Panel(
-        Markdown(text),
-        title=f"[bold]{title}[/bold]",
-        border_style=border_style,
-        padding=(0, 1),
-    )
-
-
-def _show_restore_highlights(digest: str) -> None:
+def _show_restore_highlights(digest: str, *, notes: list) -> None:
     sections = _extract_digest_sections(digest)
-    wanted = [
-        "Current Status",
-        "Active Work",
-        "Next Actions",
-        "Open Questions & Blockers",
-    ]
-    if not any(sections.get(name) for name in wanted):
-        return
 
-    grid = Table.grid(expand=True)
-    grid.add_column(ratio=1)
-    grid.add_column(ratio=1)
-    grid.add_row(
-        _section_panel("Current Status", sections.get("Current Status", []), "cyan"),
-        _section_panel("Next Actions", sections.get("Next Actions", []), "green"),
-    )
-    grid.add_row(
-        _section_panel("Active Work", sections.get("Active Work", []), "yellow"),
-        _section_panel(
+    def render_section(label: str, items: list[str]) -> None:
+        if not items:
+            return
+        console.print(f"  [bold white]{label}[/bold white]")
+        for item in items:
+            # strip markdown bold/code markers — not going through Markdown renderer
+            clean = re.sub(r"\*\*(.+?)\*\*", r"\1", item)
+            clean = re.sub(r"`(.+?)`", r"\1", clean)
+            console.print(f"    [{_ACCENT}]·[/{_ACCENT}] {clean}")
+        console.print()
+
+    has_any = any(
+        sections.get(k)
+        for k in (
+            "Current Status",
+            "Next Actions",
+            "Active Work",
             "Open Questions & Blockers",
-            sections.get("Open Questions & Blockers", []),
-            "red",
-        ),
-    )
-    console.print(
-        Panel(
-            grid,
-            title="[bold]Restore Highlights[/bold]",
-            border_style="blue",
-            padding=(0, 1),
         )
     )
+    if not has_any and not notes:
+        return
+
+    console.rule(f"[{_ACCENT}]context[/{_ACCENT}]", style=_ACCENT)
+    console.print()
+    render_section("Status", sections.get("Current Status", []))
+    render_section("Next", sections.get("Next Actions", []))
+    render_section("Active", sections.get("Active Work", []))
+    render_section("Blockers", sections.get("Open Questions & Blockers", []))
+
+    if notes:
+        console.print("  [bold white]Notes[/bold white]")
+        for row in notes:
+            text = str(row["note_text"]).strip()
+            # strip baked-in [YYYY-MM-DD HH:MM] prefix if present
+            text = re.sub(r"^\[\d{4}-\d{2}-\d{2}[^\]]*\]\s*", "", text)
+            ts = str(row["created_at"] if "created_at" in row.keys() else "")[:10]
+            console.print(f"    [{_ACCENT}]·[/{_ACCENT}] [dim]{ts}[/dim]  {text}")
+        console.print()
 
 
 def _show_since_last_sync(
@@ -182,58 +193,32 @@ def _show_since_last_sync(
 
     lines = []
     if shortstat:
-        lines.append(f"- committed changes: {shortstat}")
+        lines.append(f"- committed: {shortstat}")
     elif current_head and synced_commit != current_head:
-        lines.append("- committed changes: HEAD moved, but git diff returned no stat")
+        lines.append("- HEAD moved (no diff stat)")
 
     if changed_files:
-        lines.append(f"- changed files: {', '.join(changed_files)}")
+        lines.append(f"- files: {', '.join(changed_files)}")
 
     if status:
         noun = "file" if len(status) == 1 else "files"
-        dirty_paths = []
-        for line in status[:5]:
-            parts = line.split(maxsplit=1)
-            path = parts[1] if len(parts) == 2 else line
-            dirty_paths.append(path.strip())
-        detail = ", ".join(dirty_paths) if dirty_paths else "see `git status`"
-        lines.append(f"- uncommitted now: {len(status)} {noun} dirty ({detail})")
+        dirty_paths = [
+            line[3:].strip() if len(line) > 3 else line for line in status[:5]
+        ]
+        lines.append(f"- uncommitted: {len(status)} {noun} ({', '.join(dirty_paths)})")
 
     console.print(
         Panel(
             Markdown("\n".join(lines)),
-            title="[bold]Since last sync[/bold]",
-            border_style="magenta",
+            title=f"[{_ACCENT}]since last sync[/{_ACCENT}]",
+            border_style=_ACCENT,
             padding=(0, 1),
         )
     )
 
 
-def show_notes(notes: list[dict], *, title: str = "Project Notes") -> None:
-    if not notes:
-        return
-
-    body = Text()
-    for idx, row in enumerate(notes[:10]):
-        timestamp = str(row["created_at"])[:16].replace("T", " ")
-        text = str(row["note_text"]).strip()
-        body.append(f"[{timestamp}] ", style="dim")
-        body.append(text or "(empty)")
-        if idx < min(len(notes), 10) - 1:
-            body.append("\n\n")
-
-    console.print(
-        Panel(
-            body,
-            title=f"[bold]{title}[/bold]",
-            border_style="cyan",
-            padding=(0, 1),
-        )
-    )
-
-
-def _show_git_snapshot(snap: dict):
-    """Render live git data directly — deterministic, no AI."""
+def _show_git_snapshot(snap: dict, *, verbose: bool = False):
+    """Render live git data — deterministic, no AI."""
     commits = snap.get("commits", [])
     recent_files = snap.get("recent_files", [])
     status = snap.get("status", [])
@@ -242,47 +227,43 @@ def _show_git_snapshot(snap: dict):
     if not any([commits, recent_files, status, issues]):
         return
 
-    console.print(
-        Panel("[bold]Live snapshot[/bold]", border_style="dim", padding=(0, 2))
-    )
+    console.rule(f"[{_ACCENT}]live[/{_ACCENT}]", style=_ACCENT)
+    console.print()
 
     if commits:
         t = Table(box=box.SIMPLE, show_header=True, header_style="dim", padding=(0, 1))
-        t.add_column("commit", style="yellow", no_wrap=True, min_width=7, max_width=7)
+        t.add_column("commit", style="dim", no_wrap=True, min_width=7, max_width=7)
         t.add_column("message", style="white")
-        t.add_column("author", style="dim", no_wrap=True)
         t.add_column("when", style="dim", no_wrap=True)
         for c in commits:
-            t.add_row(c["hash"], c["subject"][:72], c["author"], c["date"])
+            t.add_row(c["hash"], c["subject"][:72], c["date"])
         console.print(t)
 
     if recent_files:
-        console.print("  [dim]10 most recently edited files (last 20 commits)[/dim]")
-        for item in recent_files:
+        shown = recent_files if verbose else recent_files[:5]
+        console.print("  [bold white]Recently edited[/bold white]")
+        for item in shown:
             additions = item["additions"]
             deletions = item["deletions"]
             if additions == deletions == "-":
-                console.print(f"  [dim]binary[/dim]  {item['path']}")
+                console.print(f"    [dim]binary[/dim]  {item['path']}")
             else:
                 console.print(
-                    f"  [green]+{additions}[/green]/[red]-{deletions}[/red]  "
-                    f"{item['path']}"
+                    f"    [{_GREEN}]+{additions}[/{_GREEN}] [{_RED}]-{deletions}[/{_RED}]  {item['path']}"
                 )
+        if not verbose and len(recent_files) > 5:
+            console.print(f"    [dim]… {len(recent_files) - 5} more[/dim]")
         console.print()
 
     if status:
-        console.print("  [dim]Uncommitted changes[/dim]")
         noun = "file" if len(status) == 1 else "files"
-        console.print(
-            f"  [yellow]{len(status)} {noun} changed[/yellow]  "
-            "[dim]run `git status` for details[/dim]"
-        )
+        console.print(f"  [dim]{len(status)} {noun} uncommitted[/dim]")
         console.print()
 
     if issues:
-        console.print("  [dim]Open GitHub issues[/dim]")
+        console.print("  [bold white]Open issues[/bold white]")
         for line in issues.splitlines():
-            console.print(f"  [magenta]·[/magenta] {line}")
+            console.print(f"  [{_ACCENT}]·[/{_ACCENT}]  {line}")
         console.print()
 
 
@@ -293,7 +274,7 @@ def show_project_list(projects: list[dict]):
         )
         return
 
-    table = Table(box=box.SIMPLE_HEAD, show_header=True, header_style="bold cyan")
+    table = Table(box=box.SIMPLE_HEAD, show_header=True, header_style=f"bold {_ACCENT}")
     table.add_column("Project", style="bold white", min_width=24)
     table.add_column("Path", style="dim", min_width=30)
     table.add_column("Sessions", justify="right")
@@ -314,15 +295,15 @@ def show_project_list(projects: list[dict]):
 
 
 def show_progress(msg: str):
-    console.print(f"  [dim cyan]→[/dim cyan] {msg}")
+    console.print(f"  [dim]→ {msg}[/dim]")
 
 
 def show_error(msg: str):
-    console.print(f"[bold red]error:[/bold red] {msg}")
+    console.print(f"[{_RED}]error:[/{_RED}] {msg}")
 
 
 def show_success(msg: str):
-    console.print(f"[bold green]✓[/bold green] {msg}")
+    console.print(f"[{_GREEN}]✓[/{_GREEN}] {msg}")
 
 
 DEMO_RESTORE_MARKDOWN = """\
@@ -367,43 +348,30 @@ def show_demo_restore():
     console.print()
     console.print(
         Panel(
-            "[bold cyan]mind restore[/bold cyan]  [dim]demo / sample output[/dim]",
-            border_style="cyan",
+            f"[bold {_ACCENT}]mind restore[/bold {_ACCENT}]  [dim]demo[/dim]",
+            border_style=_ACCENT,
             padding=(0, 2),
         )
     )
-    console.print(
-        Panel(
-            Markdown(
-                "### Sources & trust boundary\n\n"
-                "- **Bundled markdown** — not from your disk.\n"
-                "- **Real restore** uses cached cards in `~/.mind/mind.db`, project docs, and live `git` / `gh`.\n"
-                "- **Secrets** in transcripts are redacted before any model request."
-            ),
-            title="[dim]Sources & trust boundary[/dim]",
-            border_style="dim",
-            padding=(0, 1),
-        )
-    )
     console.print(Markdown(DEMO_RESTORE_MARKDOWN))
-    console.print(
-        "[dim]Below, a real restore would show a live git snapshot from your repo.[/dim]\n"
-    )
+    console.print("[dim]A real restore would show a live git snapshot below.[/dim]\n")
 
 
 def show_sync_inspect_plan(plan: SyncReadPlan, *, heading: str) -> None:
     """Print a dry-run view of local files `mind` may read for sync/digest."""
-    console.print(f"\n[bold cyan]{heading}[/bold cyan]  [dim]{plan.cwd}[/dim]\n")
+    console.print(
+        f"\n[bold {_ACCENT}]{heading}[/bold {_ACCENT}]  [dim]{plan.cwd}[/dim]\n"
+    )
     console.print(
         "[dim]No model calls or `mind sync` — local enumeration of inputs.[/dim]\n"
     )
     if plan.api_window_counts:
-        console.print("  [dim]Closed sessions in API window[/dim]")
+        console.print("  [dim]closed sessions in API window[/dim]")
         for source, count in sorted(plan.api_window_counts.items()):
             console.print(f"    [dim]{source}:[/dim] {count}")
         console.print()
     if plan.free_card_counts:
-        console.print("  [dim]Free cards available[/dim]")
+        console.print("  [dim]free cards available[/dim]")
         for source, count in sorted(plan.free_card_counts.items()):
             console.print(f"    [dim]{source}:[/dim] {count}")
         console.print()
@@ -434,4 +402,4 @@ def show_sync_inspect_plan(plan: SyncReadPlan, *, heading: str) -> None:
             console.print()
 
     if not plan.sources:
-        console.print("  [yellow]No matching sources found for this cwd.[/yellow]\n")
+        console.print(f"  [{_RED}]No matching sources found for this cwd.[/{_RED}]\n")
