@@ -185,9 +185,9 @@ If I were prioritizing for adoption, I would do this in order:
 | 2 | Trust and safety | P0 | M | Add `--inspect` / dry-run, make data provenance visible, document storage vs model-bound data, and introduce redaction rules. | done |
 | 3 | Proof of value in the output | P0 | M | Tighten the restore brief, emphasize blockers / next actions, and add a compact “changed since last sync” section. | done |
 | 4 | Adapter extensibility | P1 | L | Define adapter contracts, add a registry, move built-ins behind the interface, and document how to add `pi-agent`, `opencode`, or future sources. | done |
-| 5 | Reliability and verifiability | P1 | M | Add fixture-based tests for adapters and snapshots, then wire CI around the core flow. | to-do |
-| 6 | Distribution and package polish | P1 | S | Add `--version`, public install docs, release checklist, and complete package metadata for broader distribution. | to-do |
-| 7 | Contribution surface | P2 | S | Add `CONTRIBUTING.md`, fixture docs, and clearly scoped good-first issues for adapters and tests. | to-do |
+| 5 | Reliability and verifiability | P1 | M | Add fixture-based tests for adapters and snapshots, then wire CI around the core flow. | done |
+| 6 | Distribution and package polish | P1 | S | Add `--version`, public install docs, release checklist, and complete package metadata for broader distribution. | done |
+| 7 | Contribution surface | P2 | S | Add `CONTRIBUTING.md`, fixture docs, and clearly scoped good-first issues for adapters and tests. | done |
 
 ### Status rules
 
@@ -197,17 +197,19 @@ If I were prioritizing for adoption, I would do this in order:
 
 ## Concrete next work items
 
-- add fixture-based tests for the adapters and snapshot rendering
-- add a CI workflow
-- add a minimal contributor guide
-- tighten restore output for “proof of value” (item 3)
+All adoption backlog items are done. Remaining polish:
 
-## Notes on current gaps
+- publish to PyPI (`uv build && uv publish`)
+- tag v0.1.0 release on GitHub
+- open “good first issue” tickets for the items listed in `CONTRIBUTING.md`
 
-The repo currently has:
+## Notes on current state
 
-- no `tests/` directory
-- no CI workflow
-- no visible sample output fixtures (beyond `mind doctor --demo`)
+The repo now has:
 
-That means the core product is present, but several adoption and contribution mechanics are still missing.
+- `tests/` with fixture-based adapter and snapshot tests (37 passing)
+- `.github/workflows/ci.yml` running pytest + ruff on Python 3.11 and 3.12
+- `LICENSE` (MIT)
+- `CONTRIBUTING.md` with dev setup, adapter guide, and good-first-issue list
+- `mind --version` reading from package metadata
+- public install instructions in `README.md` (PyPI + from source)

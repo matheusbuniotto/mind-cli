@@ -1,0 +1,4 @@
+{"type":"session_meta","timestamp":"2025-01-15T11:00:00Z","payload":{"cwd":"/Users/testuser/myproject","model":"gpt-4o"}}
+{"type":"response_item","timestamp":"2025-01-15T11:00:10Z","payload":{"role":"user","content":[{"type":"input_text","text":"Add pagination to the API"}]}}
+{"type":"response_item","timestamp":"2025-01-15T11:00:20Z","payload":{"role":"assistant","content":[{"type":"output_text","text":"I'll add cursor-based pagination to the list endpoint. First, let me check the current implementation."}]}}
+{"type":"response_item","timestamp":"2025-01-15T11:01:00Z","payload":{"role":"user","content":[{"type":"input_text","text":"Use limit/offset instead of cursor"}]}}

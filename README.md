@@ -46,13 +46,23 @@ Implemented today:
 
 ## Install
 
-This project is meant to be installed locally from the repo:
+```bash
+# from PyPI (recommended)
+uv tool install mind-cli
+# or with pip
+pip install mind-cli
+```
 
 ```bash
-uv tool install /Users/matheus/Awesome-tools/mind
-mind init          # first time: config + skill + hooks
+# from source (dev / latest)
+git clone https://github.com/matheusbuniotto/mind-cli
+uv tool install ./mind-cli
+```
+
+```bash
+mind init          # first time: config wizard + skill + hooks
 # after upgrading mind:
-mind install -y      # refresh skill + hooks only
+mind install -y    # refresh skill + hooks only
 ```
 
 ### Agent integrations (skill + hook)
