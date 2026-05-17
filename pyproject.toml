@@ -5,12 +5,23 @@ build-backend = "hatchling.build"
 [project]
 name = "mind-cli"
 version = "0.1.0"
-description = "Frictionless AI project context manager — restore your mind state in 2 minutes"
+description = "AI project context recovery CLI for Claude Code, Codex, and Cursor"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Matheus Buniotto", email = "matheus.buniotto@gmail.com" }]
 requires-python = ">=3.11"
-keywords = ["ai", "cli", "context", "developer-tools", "llm", "productivity"]
+keywords = [
+    "ai",
+    "cli",
+    "context-recovery",
+    "claude-code",
+    "codex",
+    "cursor",
+    "developer-tools",
+    "llm",
+    "productivity",
+    "session-recap",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
@@ -20,6 +31,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Version Control",
+    "Topic :: Text Processing",
     "Topic :: Utilities",
 ]
 dependencies = [
@@ -37,6 +50,8 @@ dependencies = [
 Homepage = "https://github.com/matheusbuniotto/mind-cli"
 Repository = "https://github.com/matheusbuniotto/mind-cli"
 Issues = "https://github.com/matheusbuniotto/mind-cli/issues"
+Documentation = "https://github.com/matheusbuniotto/mind-cli#readme"
+Changelog = "https://github.com/matheusbuniotto/mind-cli/releases"
 
 [project.scripts]
 mind = "mind.main:app"
