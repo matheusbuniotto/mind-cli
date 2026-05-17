@@ -174,6 +174,7 @@ That split matters because the AI layer restores intent, while the deterministic
 
 Each restore also prints a short **Sources & trust boundary** section that explains which artifacts came from SQLite, which project files are re-read on sync, and what is recomputed live from `git` / `gh`.
 It also calls out the freshness boundary explicitly: the AI digest is cached from the last sync, while the live Git snapshot is recomputed on every restore.
+The restore view now also adds a compact **Since last sync** diff and a **Restore Highlights** panel so blockers and next actions are visible before you scroll.
 
 ## Trust, privacy, and provenance
 

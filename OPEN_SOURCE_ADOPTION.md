@@ -174,7 +174,7 @@ If I were prioritizing for adoption, I would do this in order:
 | Initiative | Priority | Level | Brief / plan | Status |
 | --- | --- | --- | --- | --- |
 | Core restore flow | P0 | L | `mind sync` + `mind restore`, session-card caching, AI digest generation | done |
-| Deterministic project snapshot | P0 | M | recent commits, hot files, git status, top GitHub issues | done |
+| Deterministic project snapshot | P0 | M | recent commits, recently edited files, dirty-tree count, top GitHub issues | done |
 | Multi-source ingestion baseline | P0 | M | Claude Code, Codex, and Cursor support wired into the current sync flow | done |
 
 ### Adoption backlog
@@ -183,7 +183,7 @@ If I were prioritizing for adoption, I would do this in order:
 | --- | --- | --- | --- | --- | --- |
 | 1 | First-run experience | P0 | M | Add `mind doctor`, actionable setup diagnostics, and a demo path that shows value before real data exists. | done |
 | 2 | Trust and safety | P0 | M | Add `--inspect` / dry-run, make data provenance visible, document storage vs model-bound data, and introduce redaction rules. | done |
-| 3 | Proof of value in the output | P0 | M | Tighten the restore brief, emphasize blockers / next actions, and add a compact “changed since last sync” section. | to-do |
+| 3 | Proof of value in the output | P0 | M | Tighten the restore brief, emphasize blockers / next actions, and add a compact “changed since last sync” section. | done |
 | 4 | Adapter extensibility | P1 | L | Define adapter contracts, add a registry, move built-ins behind the interface, and document how to add `pi-agent`, `opencode`, or future sources. | done |
 | 5 | Reliability and verifiability | P1 | M | Add fixture-based tests for adapters and snapshots, then wire CI around the core flow. | to-do |
 | 6 | Distribution and package polish | P1 | S | Add `--version`, public install docs, release checklist, and complete package metadata for broader distribution. | to-do |

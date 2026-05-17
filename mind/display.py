@@ -1,5 +1,6 @@
 """Rich TUI display for mind restore briefs."""
 
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -23,7 +24,7 @@ def show_restore(
     provenance_md: str | None = None,
     synced_commit: str | None = None,
 ):
-    from .adapters.project_files import _run, git_snapshot
+    from .adapters.project_files import _run, git_diff_summary, git_snapshot
 
     project_name = Path(cwd).name or cwd
     age = ""
@@ -59,11 +60,18 @@ def show_restore(
             )
         )
     current_head = _run(["git", "rev-parse", "HEAD"], cwd=cwd)
+    snap = git_snapshot(cwd)
     _show_digest_freshness(synced_commit=synced_commit, current_head=current_head)
+    _show_restore_highlights(digest)
+    _show_since_last_sync(
+        synced_commit=synced_commit,
+        current_head=current_head,
+        diff=git_diff_summary(cwd, synced_commit or "", current_head or ""),
+        dirty_files=snap,
+    )
     console.print(Markdown(digest))
 
     # --- deterministic git section (live, no AI) ---
-    snap = git_snapshot(cwd)
     _show_git_snapshot(snap)
     console.print()
 
@@ -87,6 +95,113 @@ def _show_digest_freshness(*, synced_commit: str | None, current_head: str) -> N
 
     console.print(
         "[dim]AI digest is cached from the last sync; the live Git snapshot below is recomputed on every restore.[/dim]\n"
+    )
+
+
+def _extract_digest_sections(digest: str) -> dict[str, list[str]]:
+    sections: dict[str, list[str]] = {}
+    current = ""
+    for raw_line in digest.splitlines():
+        line = raw_line.strip()
+        header = re.match(r"^##\s+(.+)$", line)
+        if header:
+            current = header.group(1).strip()
+            sections.setdefault(current, [])
+            continue
+        if not current or not line:
+            continue
+        bullet = re.match(r"^(?:[-*]|\d+\.)\s+(.+)$", line)
+        if bullet:
+            sections.setdefault(current, []).append(bullet.group(1).strip())
+    return sections
+
+
+def _section_panel(title: str, items: list[str], border_style: str) -> Panel:
+    text = "\n".join(f"- {item}" for item in items[:3]) or "- (none)"
+    return Panel(
+        Markdown(text),
+        title=f"[bold]{title}[/bold]",
+        border_style=border_style,
+        padding=(0, 1),
+    )
+
+
+def _show_restore_highlights(digest: str) -> None:
+    sections = _extract_digest_sections(digest)
+    wanted = [
+        "Current Status",
+        "Active Work",
+        "Next Actions",
+        "Open Questions & Blockers",
+    ]
+    if not any(sections.get(name) for name in wanted):
+        return
+
+    grid = Table.grid(expand=True)
+    grid.add_column(ratio=1)
+    grid.add_column(ratio=1)
+    grid.add_row(
+        _section_panel("Current Status", sections.get("Current Status", []), "cyan"),
+        _section_panel("Next Actions", sections.get("Next Actions", []), "green"),
+    )
+    grid.add_row(
+        _section_panel("Active Work", sections.get("Active Work", []), "yellow"),
+        _section_panel(
+            "Open Questions & Blockers",
+            sections.get("Open Questions & Blockers", []),
+            "red",
+        ),
+    )
+    console.print(
+        Panel(
+            grid,
+            title="[bold]Restore Highlights[/bold]",
+            border_style="blue",
+            padding=(0, 1),
+        )
+    )
+
+
+def _show_since_last_sync(
+    synced_commit: str | None,
+    current_head: str,
+    diff: dict[str, object],
+    dirty_files: dict,
+) -> None:
+    if not synced_commit:
+        return
+
+    shortstat = str(diff.get("shortstat") or "").strip()
+    changed_files = diff.get("files") or []
+    status = dirty_files.get("status", [])
+    if not shortstat and not changed_files and not status:
+        return
+
+    lines = []
+    if shortstat:
+        lines.append(f"- committed changes: {shortstat}")
+    elif current_head and synced_commit != current_head:
+        lines.append("- committed changes: HEAD moved, but git diff returned no stat")
+
+    if changed_files:
+        lines.append(f"- changed files: {', '.join(changed_files)}")
+
+    if status:
+        noun = "file" if len(status) == 1 else "files"
+        dirty_paths = []
+        for line in status[:5]:
+            path = line[3:] if len(line) > 3 else line
+            dirty_paths.append(path.strip())
+        detail = ", ".join(dirty_paths) if dirty_paths else "see `git status`"
+        lines.append(f"- uncommitted now: {len(status)} {noun} dirty ({detail})")
+
+    console.print(
+        Panel(
+            Markdown("\n".join(lines)),
+            title="[bold]Since last sync[/bold]",
+            border_style="magenta",
+            padding=(0, 1),
+        )
     )
 
 

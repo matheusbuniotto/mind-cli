@@ -142,6 +142,31 @@ def git_snapshot(
     }
 
 
+def git_diff_summary(
+    cwd: str,
+    base_commit: str,
+    head_commit: str,
+    *,
+    file_limit: int = 5,
+) -> dict[str, object]:
+    """Compact summary of what changed between two commits."""
+    if not base_commit or not head_commit or base_commit == head_commit:
+        return {}
+
+    shortstat = _run(
+        ["git", "diff", "--shortstat", f"{base_commit}..{head_commit}"], cwd=cwd
+    )
+    files_out = _run(
+        ["git", "diff", "--name-only", f"{base_commit}..{head_commit}"], cwd=cwd
+    )
+    files = [line for line in files_out.splitlines() if line.strip()][:file_limit]
+
+    return {
+        "shortstat": shortstat,
+        "files": files,
+    }
+
+
 def extract_project_context(cwd: str) -> str:
     """Text block fed into the AI digest (static docs + session signals)."""
     root = Path(cwd)
