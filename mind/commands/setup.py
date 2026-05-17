@@ -312,9 +312,66 @@ def config():
     c.print(f"[dim]Settings: open {CONFIG_FILE}[/dim]\n")
 
 
+def set_key(
+    provider: str = typer.Argument(
+        ...,
+        help="Provider: anthropic or openrouter",
+        metavar="PROVIDER",
+    ),
+):
+    """Update your API key without re-running the full init wizard.
+
+    Examples:
+
+      mind set-key anthropic
+
+      mind set-key openrouter
+    """
+    from rich.console import Console
+    from rich.prompt import Prompt
+
+    c = Console()
+    ensure_dirs()
+
+    env_var_map = {
+        "anthropic": "ANTHROPIC_API_KEY",
+        "openrouter": "OPENAI_API_KEY",
+    }
+    if provider not in env_var_map:
+        display.show_error(
+            f"Unknown provider {provider!r}. Choose: anthropic, openrouter"
+        )
+        raise typer.Exit(1)
+
+    env_var = env_var_map[provider]
+    c.print(
+        f"\n[dim]Paste your [bold]{env_var}[/bold] key (hidden input). "
+        f"It will be saved to [bold]{DOTENV_FILE}[/bold] (chmod 0600).[/dim]\n"
+    )
+    secret = Prompt.ask("  API key", password=True, show_default=False)
+    if not secret or not secret.strip():
+        c.print("[yellow]Skipped[/yellow] — empty input.")
+        raise typer.Exit(0)
+
+    try:
+        store_mind_dotenv_api_key(env_var=env_var, value=secret)
+    except Exception as exc:
+        display.show_error(f"Could not write ~/.mind/.env: {exc}")
+        raise typer.Exit(1) from exc
+
+    c.print(
+        f"\n[green]✓[/green] Saved [bold]{env_var}[/bold] to [bold]{DOTENV_FILE}[/bold] (0600).\n"
+        "  Do not commit or screenshot this file.\n"
+    )
+
+
 def register_init(app: typer.Typer) -> None:
     app.command()(init)
 
 
 def register_config(app: typer.Typer) -> None:
     app.command()(config)
+
+
+def register_set_key(app: typer.Typer) -> None:
+    app.command(name="set-key")(set_key)

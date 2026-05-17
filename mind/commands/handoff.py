@@ -28,7 +28,9 @@ def diff(
 
     since = row["synced_commit"]
     if not since:
-        display.show_error("Digest has no recorded commit. Run `mind sync` to capture one.")
+        display.show_error(
+            "Digest has no recorded commit. Run `mind sync` to capture one."
+        )
         raise typer.Exit(1)
 
     from rich import box as rbox
@@ -58,8 +60,12 @@ def diff(
             commits.append(parts)
 
     if commits:
-        table = Table(box=rbox.SIMPLE, show_header=True, header_style="dim", padding=(0, 1))
-        table.add_column("commit", style="yellow", no_wrap=True, min_width=7, max_width=7)
+        table = Table(
+            box=rbox.SIMPLE, show_header=True, header_style="dim", padding=(0, 1)
+        )
+        table.add_column(
+            "commit", style="yellow", no_wrap=True, min_width=7, max_width=7
+        )
         table.add_column("message", style="white")
         table.add_column("author", style="dim", no_wrap=True)
         table.add_column("when", style="dim", no_wrap=True)
@@ -88,12 +94,16 @@ def diff(
         c.print()
 
     age = row["generated_at"][:16] if row["generated_at"] else "unknown"
-    c.print(f"  [dim]Last synced: {age} UTC — run [bold]mind sync[/bold] to update.[/dim]\n")
+    c.print(
+        f"  [dim]Last synced: {age} UTC — run [bold]mind sync[/bold] to update.[/dim]\n"
+    )
 
 
 def share(
     path: Optional[str] = typer.Argument(None, help="Project path (default: cwd)"),
-    output: Optional[str] = typer.Option(None, "--out", "-o", help="Write to file instead of stdout"),
+    output: Optional[str] = typer.Option(
+        None, "--out", "-o", help="Write to file instead of stdout"
+    ),
     no_clip: bool = typer.Option(False, "--no-clip", help="Skip clipboard copy"),
 ):
     """Export a clean handoff brief — stdout, clipboard, or file."""
@@ -124,13 +134,20 @@ def share(
         try:
             proc = subprocess.run(["pbcopy"], input=brief.encode(), capture_output=True)
             if proc.returncode == 0:
-                display.show_success("Copied to clipboard — paste into chat or send to teammate.")
+                display.show_success(
+                    "Copied to clipboard — paste into chat or send to teammate."
+                )
         except Exception:
             pass
 
 
 def open_project(
     path: Optional[str] = typer.Argument(None, help="Project path (default: cwd)"),
+    skip_permissions: bool = typer.Option(
+        False,
+        "--dangerously-skip-permissions",
+        help="Pass --dangerously-skip-permissions to Claude Code (bypasses safety prompts).",
+    ),
 ):
     """Open project in Claude Code with context pre-loaded (copies restore brief to clipboard)."""
     ensure_dirs()
@@ -141,15 +158,20 @@ def open_project(
         raise typer.Exit(1)
 
     try:
-        proc = subprocess.run(["pbcopy"], input=row["digest_text"].encode(), capture_output=True)
+        proc = subprocess.run(
+            ["pbcopy"], input=row["digest_text"].encode(), capture_output=True
+        )
         if proc.returncode == 0:
             display.show_success("Restore brief copied to clipboard.")
         display.show_progress("Paste it as your first message in Claude Code.")
     except Exception:
         pass
 
+    cmd = ["claude"]
+    if skip_permissions:
+        cmd.append("--dangerously-skip-permissions")
     try:
-        subprocess.Popen(["claude", "--dangerously-skip-permissions"], cwd=cwd)
+        subprocess.Popen(cmd, cwd=cwd)
         display.show_success(f"Launched Claude Code in {cwd}")
     except FileNotFoundError:
         display.show_progress(f"cd {cwd} && claude")

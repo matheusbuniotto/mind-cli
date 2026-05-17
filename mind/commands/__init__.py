@@ -13,6 +13,7 @@ def register_commands(app: Typer) -> None:
     check_cmd.register(app)
     install_cmd.register(app)
     setup.register_init(app)
+    setup.register_set_key(app)
     projects.register(app)
     handoff.register(app)
     notes.register(app)
