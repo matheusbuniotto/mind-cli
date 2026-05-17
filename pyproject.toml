@@ -23,3 +23,6 @@ mind = "mind.main:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["mind"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"mind/integrations" = "mind/integrations"

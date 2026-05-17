@@ -20,6 +20,10 @@ _DEFAULT_CONFIG = {
     "model": "claude-haiku-4-5-20251001",
     "session_card_max_tokens": 800,
     "digest_max_tokens": 1600,
+    "check": {
+        "stale_days": 7,
+        "commits_since_sync": 5,
+    },
     # Where API keys are resolved from:
     #   dotenv_first — ~/.mind/.env then <project>/.env, then shell env
     #   env_first      — shell env, then ~/.mind/.env then <project>/.env
@@ -101,6 +105,38 @@ def ensure_dirs():
     PROJECTS_DIR.mkdir(exist_ok=True)
     if not CONFIG_FILE.exists():
         _write_default_config()
+
+
+def store_mind_dotenv_api_key(*, env_var: str, value: str) -> None:
+    """Persist an API key to ``~/.mind/.env`` (never ``config.yml``).
+
+    Values are written with ``python-dotenv``'s ``set_key`` (safe quoting). The
+    alternate key name is removed from the same file so mixed Anthropic/OpenAI
+    entries cannot cause surprising precedence during resolution.
+
+    On POSIX, the file is chmod ``0600`` after write.
+    """
+    from dotenv.main import set_key, unset_key
+
+    if env_var not in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
+        raise ValueError(f"unsupported env var: {env_var!r}")
+
+    ensure_dirs()
+    trimmed = value.strip()
+    if not trimmed:
+        raise ValueError("refusing to write empty API key")
+
+    other = "OPENAI_API_KEY" if env_var == "ANTHROPIC_API_KEY" else "ANTHROPIC_API_KEY"
+
+    path = str(DOTENV_FILE)
+    if DOTENV_FILE.is_file():
+        unset_key(path, other)
+
+    set_key(path, env_var, trimmed, quote_mode="always")
+    try:
+        DOTENV_FILE.chmod(0o600)
+    except OSError:
+        pass
 
 
 def _write_default_config():

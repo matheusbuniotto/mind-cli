@@ -12,6 +12,7 @@ from rich.table import Table
 
 from .config import CONFIG_FILE, DOTENV_FILE, ensure_dirs, get_config
 from .display import show_demo_restore
+from .install_agents import agent_targets
 from .read_sources import format_tooling_paths
 
 c = Console()
@@ -128,6 +129,35 @@ def run_doctor(*, demo: bool = False) -> None:
 
     mind_home = Path(paths["mind_home"])
     t.add_row("mind home", str(mind_home))
+
+    skill_paths = [
+        a.skill_dir for a in agent_targets() if (a.skill_dir / "SKILL.md").is_file()
+    ]
+    hook_paths = [
+        a.hook_script
+        for a in agent_targets()
+        if a.hook_script and a.hook_script.is_file()
+    ]
+    if skill_paths:
+        t.add_row(
+            "mind-recap skill",
+            f"[green]installed[/green] ({len(skill_paths)} path(s))",
+        )
+    else:
+        t.add_row(
+            "mind-recap skill",
+            "[yellow]not installed[/yellow] — run [bold]mind init[/bold] or [bold]mind install -y[/bold]",
+        )
+    if hook_paths:
+        t.add_row(
+            "mind session hook",
+            f"[green]installed[/green] ({len(hook_paths)} script(s))",
+        )
+    else:
+        t.add_row(
+            "mind session hook",
+            "[dim]not installed[/dim] — run [bold]mind init[/bold] or [bold]mind install -y[/bold]",
+        )
 
     c.print(t)
 
