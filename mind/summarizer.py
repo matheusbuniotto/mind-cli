@@ -4,7 +4,10 @@ Uses the Anthropic SDK when no base_url is set.
 Falls back to the OpenAI-compatible SDK for any other provider (OpenRouter, opencode, Ollama, etc.).
 """
 
+from __future__ import annotations
+
 import hashlib
+import re
 from typing import Any
 
 from .config import get_config
@@ -120,6 +123,65 @@ This brief is for the developer who built it — they want details, not summarie
 --- CONTEXT ---
 {context}
 """
+
+
+REQUIRED_DIGEST_SECTIONS = (
+    "Goal & Vision",
+    "Current Status",
+    "Active Work",
+    "Next Actions",
+)
+
+MIN_DIGEST_CHARS = 400
+
+_SESSION_LEAK_MARKERS = (
+    "[TOOL_CALL]",
+    "[/TOOL_CALL]",
+    "=== ACTIVE SESSION",
+)
+
+
+class DigestValidationError(Exception):
+    """Model output did not match the restore-brief contract."""
+
+    def __init__(self, issues: list[str]):
+        self.issues = issues
+        super().__init__("; ".join(issues))
+
+
+def digest_section_names(text: str) -> set[str]:
+    names: set[str] = set()
+    for line in text.splitlines():
+        match = re.match(r"^##\s+(.+)$", line.strip())
+        if match:
+            names.add(match.group(1).strip())
+    return names
+
+
+def validate_digest(text: str) -> tuple[bool, list[str]]:
+    """Return whether text looks like a structured restore brief."""
+    issues: list[str] = []
+    stripped = text.strip()
+
+    if len(stripped) < MIN_DIGEST_CHARS:
+        issues.append(
+            f"too short ({len(stripped)} chars, expected {MIN_DIGEST_CHARS}+)"
+        )
+
+    if not re.search(r"^##\s+", stripped, re.MULTILINE):
+        issues.append("no markdown section headers (## …)")
+
+    present = digest_section_names(stripped)
+    for section in REQUIRED_DIGEST_SECTIONS:
+        if section not in present:
+            issues.append(f"missing section: ## {section}")
+
+    for marker in _SESSION_LEAK_MARKERS:
+        if marker in text:
+            issues.append(f"looks like raw session output ({marker})")
+            break
+
+    return len(issues) == 0, issues
 
 
 def text_hash(text: str) -> str:

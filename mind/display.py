@@ -12,6 +12,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .read_sources import SyncReadPlan
+from .summarizer import validate_digest
 
 console = Console()
 
@@ -58,6 +59,21 @@ def show_restore(
     console.print()
     console.print(Panel(header, border_style=_ACCENT, padding=(0, 2)))
 
+    digest_ok, digest_issues = validate_digest(digest)
+    if not digest_ok:
+        issue_lines = "\n".join(f"  • {issue}" for issue in digest_issues)
+        console.print(
+            Panel(
+                f"Cached digest failed validation and cannot drive restore highlights.\n\n"
+                f"{issue_lines}\n\n"
+                "Run [bold]mind restore --force[/bold] after fixing your model/API "
+                "(see [bold]mind doctor[/bold]). Use [bold]-v[/bold] to view the raw text.",
+                title=f"[{_RED}]invalid digest[/{_RED}]",
+                border_style=_RED,
+                padding=(0, 1),
+            )
+        )
+
     current_head = _run(["git", "rev-parse", "HEAD"], cwd=cwd)
     snap = git_snapshot(cwd)
 
@@ -94,7 +110,8 @@ def show_restore(
                 console.print(f"    [{_ACCENT}]·[/{_ACCENT}] [dim]{ts}[/dim]  {text}")
             console.print()
     else:
-        _show_restore_highlights(digest, notes=notes or [])
+        if digest_ok:
+            _show_restore_highlights(digest, notes=notes or [])
 
     _show_git_snapshot(snap, verbose=verbose)
     console.print()

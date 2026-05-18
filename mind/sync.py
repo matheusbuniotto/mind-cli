@@ -65,7 +65,11 @@ def sync_project(
 
             card_text = candidate.text
             if candidate.needs_summary:
-                label = Path(candidate.session_file).name[:36] if candidate.session_file else candidate.source
+                label = (
+                    Path(candidate.session_file).name[:36]
+                    if candidate.session_file
+                    else candidate.source
+                )
                 progress(f"Summarizing {candidate.source} {label}…")
                 card_text = summarizer.summarize_session(
                     candidate.text,
@@ -144,6 +148,11 @@ def build_digest(
         project_name=_project_name(cwd),
         context=context,
     )
+
+    ok, issues = summarizer.validate_digest(digest)
+    if not ok:
+        progress("Digest validation failed — previous cache kept.")
+        raise summarizer.DigestValidationError(issues)
 
     head = project_files._run(["git", "rev-parse", "HEAD"], cwd=cwd)
     store.upsert_digest(

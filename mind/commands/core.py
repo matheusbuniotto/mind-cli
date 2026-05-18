@@ -12,6 +12,30 @@ from ..config import ensure_dirs
 from ..display import console
 from ..doctor import run_doctor
 from ..read_sources import build_restore_provenance_markdown, build_sync_read_plan
+from ..summarizer import DigestValidationError
+
+
+def _format_digest_validation_error(exc: DigestValidationError) -> str:
+    lines = ["Model returned an invalid restore brief:", ""]
+    lines.extend(f"  • {issue}" for issue in exc.issues)
+    lines.extend(
+        [
+            "",
+            "The digest was not saved. Try a stronger model in ~/.mind/config.yml,",
+            "or run `mind restore --force` again after fixing your API setup.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _run_full_sync(cwd: str, *, session_limit: int) -> str:
+    try:
+        return sync.full_sync(
+            cwd, progress=display.show_progress, session_limit=session_limit
+        )
+    except DigestValidationError as exc:
+        display.show_error(_format_digest_validation_error(exc))
+        raise typer.Exit(1) from exc
 
 
 def restore(
@@ -42,9 +66,17 @@ def restore(
         display.show_sync_inspect_plan(plan, heading="mind restore --inspect")
         row = store.get_digest(cwd)
         if row:
+            from ..summarizer import validate_digest
+
+            ok, issues = validate_digest(row["digest_text"])
+            validity = "valid" if ok else "invalid"
             console.print(
-                f"\n[dim]Cached digest:[/dim] yes  ·  generated {row['generated_at'][:19]} UTC"
+                f"\n[dim]Cached digest:[/dim] yes ({validity})"
+                f"  ·  generated {row['generated_at'][:19]} UTC"
             )
+            if not ok:
+                for issue in issues:
+                    console.print(f"  [dim]·[/dim] {issue}")
         else:
             console.print(
                 "\n[dim]Cached digest:[/dim] no — a restore would run `mind sync` first"
@@ -66,7 +98,7 @@ def restore(
     if force:
         require_api_key(cwd)
         display.show_progress("Syncing sessions…")
-        digest = sync.full_sync(cwd, progress=display.show_progress)
+        digest = _run_full_sync(cwd, session_limit=2)
         if not digest:
             display.show_error(f"No AI sessions found for {cwd}")
             raise typer.Exit(1)
@@ -77,7 +109,7 @@ def restore(
             return
         require_api_key(cwd)
         display.show_progress(f"No cached digest found. Syncing {cwd}…")
-        digest = sync.full_sync(cwd, progress=display.show_progress)
+        digest = _run_full_sync(cwd, session_limit=2)
         if not digest:
             display.show_error(
                 f"No AI sessions found for {cwd}.\n"
@@ -121,7 +153,7 @@ def sync_cmd(
     ensure_dirs()
     require_api_key(cwd)
     display.show_progress(f"Syncing {cwd}…")
-    digest = sync.full_sync(cwd, progress=display.show_progress, session_limit=limit)
+    digest = _run_full_sync(cwd, session_limit=limit)
     if digest:
         display.show_success("Digest ready. Run `mind restore` to view.")
     else:
